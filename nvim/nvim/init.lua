@@ -125,6 +125,7 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+
 -- Plugin specifications
 require("lazy").setup({
   -- Colorscheme
@@ -139,6 +140,19 @@ require("lazy").setup({
       vim.cmd.colorscheme("tokyonight")
     end,
   },
+
+{
+    "kawre/leetcode.nvim",
+    build = ":TSUpdate html", -- if you have `nvim-treesitter` installed
+    dependencies = {
+        -- include a picker of your choice, see picker section for more details
+        "nvim-lua/plenary.nvim",
+        "MunifTanjim/nui.nvim",
+    },
+    opts = {
+        -- configuration goes here
+    },
+},
 
   -- File explorer
   {
@@ -212,6 +226,30 @@ require("lazy").setup({
         },
         indent = { enable = true },
       })
+    end,
+  },
+
+  -- LSP Configuration
+  {
+    "neovim/nvim-lspconfig",
+    config = function()
+      local lspconfig = require("lspconfig")
+
+      -- Python LSP setup
+      lspconfig.pyright.setup({
+        settings = {
+          python = {
+            analysis = {
+              autoSearchPaths = true,
+              useLibraryCodeForTypes = true,
+              diagnosticMode = "workspace",
+            }
+          }
+        }
+      })
+
+      -- Optional: Python LSP Server as alternative
+      -- lspconfig.pylsp.setup({})
     end,
   },
 
