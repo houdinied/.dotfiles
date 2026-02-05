@@ -1,0 +1,25 @@
+{
+    "border": "none",
+    "current_border_width": 2,
+    "floating": "auto_off",
+    "geometry": {
+       "height": 1061,
+       "width": 1920,
+       "x": 0,
+       "y": 0
+    },
+    "marks": [],
+    "name": "Untitled 8 - mind - Obsidian v1.9.14",
+    "percent": 1,
+    "swallows": [
+       {
+        "class": "^obsidian$",
+        "instance": "^obsidian$",
+        "machine": "^do$",
+        "title": "^Untitled\\ 8\\ \\-\\ mind\\ \\-\\ Obsidian\\ v1\\.9\\.14$",
+        "window_role": "^browser\\-window$"
+       }
+    ],
+    "type": "con"
+}
+
