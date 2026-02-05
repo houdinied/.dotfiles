@@ -1,0 +1,58 @@
+{
+    "border": "normal",
+    "floating": "auto_off",
+    "layout": "tabbed",
+    "marks": [],
+    "percent": null,
+    "type": "con",
+    "nodes": [
+        {
+            "border": "none",
+            "current_border_width": 2,
+            "floating": "auto_off",
+            "geometry": {
+               "height": 1041,
+               "width": 1916,
+               "x": 2,
+               "y": 18
+            },
+            "marks": [],
+            "name": "Telegram (3178)",
+            "percent": 0.5,
+            "swallows": [
+               {
+                "class": "^TelegramDesktop$",
+                "instance": "^telegram\\-desktop$",
+                "machine": "^do$",
+                "title": "^Telegram\\ \\(3178\\)$"
+               }
+            ],
+            "type": "con"
+        },
+        {
+            "border": "normal",
+            "current_border_width": 2,
+            "floating": "auto_off",
+            "geometry": {
+               "height": 1041,
+               "width": 1916,
+               "x": 0,
+               "y": 18
+            },
+            "marks": [],
+            "name": "Friends - Discord",
+            "percent": 0.5,
+            "swallows": [
+               {
+                "class": "^discord$",
+                "instance": "^discord$",
+                "machine": "^do$",
+                "title": "^Friends\\ \\-\\ Discord$",
+                "window_role": "^browser\\-window$"
+               }
+            ],
+            "type": "con"
+        }
+    ]
+}
+
