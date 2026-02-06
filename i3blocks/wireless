@@ -1,0 +1,15 @@
+#!/bin/bash
+INTERFACE=$(iwconfig 2>/dev/null | grep "ESSID" | head -1 | awk '{print $1}')
+if [ -z "$INTERFACE" ]; then
+    INTERFACE="wlan0"
+fi
+
+QUALITY=$(grep "$INTERFACE" /proc/net/wireless 2>/dev/null | awk '{print int($3*100/70)}')
+ESSID=$(iwgetid -r 2>/dev/null)
+IP=$(ip -4 addr show "$INTERFACE" 2>/dev/null | grep inet | awk '{print $2}' | cut -d/ -f1)
+
+if [ -n "$IP" ]; then
+    echo "W: ($QUALITY% at $ESSID) $IP"
+else
+    echo "W: down"
+fi

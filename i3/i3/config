@@ -157,7 +157,7 @@ mode "resize" {
 bindsym $mod+r mode "resize"
 
 bar {
-    status_command /usr/bin/i3status -c ~/.config/i3status/config
+    status_command /usr/bin/i3blocks -c ~/.config/i3blocks/config
     position top
 }
 

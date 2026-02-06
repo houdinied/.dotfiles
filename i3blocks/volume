@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Left click opens pavucontrol
+case $BLOCK_BUTTON in
+    1) pavucontrol & ;;
+    3) pactl set-sink-mute @DEFAULT_SINK@ toggle ;;
+esac
+
+# Get volume and mute status
+MUTED=$(pactl get-sink-mute @DEFAULT_SINK@ | awk '{print $2}')
+VOL=$(pactl get-sink-volume @DEFAULT_SINK@ | awk '{print $5}' | sed 's/%//')
+
+if [ "$MUTED" = "yes" ]; then
+    echo "VOL muted"
+else
+    echo "VOL $VOL%"
+fi
