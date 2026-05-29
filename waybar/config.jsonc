@@ -8,6 +8,7 @@
   "modules-left": ["custom/omarchy", "hyprland/workspaces", "custom/vpn"],
   "modules-center": ["clock#time", "clock#date", "hyprland/submap"],
   "modules-right": [
+    "custom/pomodoro",
     "custom/screenrecording-indicator",
     "custom/idle-indicator",
     "custom/notification-silencing-indicator",
@@ -68,6 +69,16 @@
     "exec": "~/.config/waybar/scripts/temperature.sh",
     "interval": 5,
     "return-type": "json"
+  },
+
+  "custom/pomodoro": {
+    "exec": "~/.config/waybar/scripts/pomodoro.sh status",
+    "interval": 1,
+    "return-type": "json",
+    "on-click": "~/.config/waybar/scripts/pomodoro.sh toggle",
+    "on-click-right": "~/.config/waybar/scripts/pomodoro.sh settings",
+    "on-click-middle": "~/.config/waybar/scripts/pomodoro.sh skip",
+    "tooltip": true
   },
 
   "cpu": {

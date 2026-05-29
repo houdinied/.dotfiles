@@ -30,6 +30,15 @@ trust_level = "trusted"
 [projects."/home/bdepyzy/work/companies/RensselaerTrading"]
 trust_level = "trusted"
 
+[projects."/home/bdepyzy/work/companies/candidex/candidex"]
+trust_level = "trusted"
+
+[projects."/home/bdepyzy/Downloads"]
+trust_level = "trusted"
+
+[projects."/home/bdepyzy/forge/gpu/icml-comp"]
+trust_level = "trusted"
+
 [plugins."github@openai-curated"]
 enabled = true
 

@@ -171,11 +171,27 @@ window#waybar {
 }
 
 /* System info modules */
+#custom-pomodoro,
 #temperature,
 #cpu,
 #memory {
   margin: 0 8px;
   min-width: 36px;
+}
+
+#custom-pomodoro {
+  min-width: 76px;
+  font-weight: bold;
+  color: #e0af68;
+}
+
+#custom-pomodoro.break,
+#custom-pomodoro.long_break {
+  color: #73daca;
+}
+
+#custom-pomodoro.paused {
+  opacity: 0.55;
 }
 
 #cpu {

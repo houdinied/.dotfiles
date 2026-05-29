@@ -15,6 +15,13 @@ refocus_active() {
     hyprctl dispatch focuswindow "address:$ADDR"
 }
 
+move_active_out_of_group() {
+    hyprctl dispatch moveoutofgroup
+    hyprctl dispatch movewindow "$DIR"
+    keep_on_workspace
+    refocus_active
+}
+
 keep_on_workspace() {
     local current_ws
     current_ws=$(hyprctl clients -j | jq -r --arg addr "$ADDR" '.[] | select(.address == $addr) | .workspace.id')
@@ -32,16 +39,14 @@ if [ "$GROUPED_LEN" -gt 1 ]; then
     case $DIR in
         l|u)
             if [ "$IDX" -eq 0 ]; then
-                hyprctl dispatch moveoutofgroup
-                refocus_active
+                move_active_out_of_group
             else
                 hyprctl dispatch movegroupwindow b
             fi
             ;;
         r|d)
             if [ "$IDX" -eq "$LAST" ]; then
-                hyprctl dispatch moveoutofgroup
-                refocus_active
+                move_active_out_of_group
             else
                 hyprctl dispatch movegroupwindow f
             fi
