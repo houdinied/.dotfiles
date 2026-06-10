@@ -1,4 +1,40 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "autoupdate": false
+  "autoupdate": false,
+  "model": "vllm/qwen3.6-27b",
+  "small_model": "vllm/qwen3.6-27b",
+  "provider": {
+    "vllm": {
+      "id": "vllm",
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "vLLM (local)",
+      "api": "http://localhost:8000/v1",
+      "options": {
+        "baseURL": "http://localhost:8000/v1",
+        "apiKey": "EMPTY"
+      },
+      "models": {
+        "qwen3.6-27b": {
+          "id": "qwen3.6-27b",
+          "name": "Qwen3.6-27B (local, 1M ctx)",
+          "reasoning": true,
+          "tool_call": true,
+          "temperature": true,
+          "modalities": {
+            "input": [
+              "text",
+              "image"
+            ],
+            "output": [
+              "text"
+            ]
+          },
+          "limit": {
+            "context": 1048576,
+            "output": 131072
+          }
+        }
+      }
+    }
+  }
 }

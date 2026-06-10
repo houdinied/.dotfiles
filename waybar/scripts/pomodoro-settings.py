@@ -15,6 +15,7 @@ DEFAULTS = {
     "AUTO_START_BREAKS": 0,
     "AUTO_START_POMODOROS": 0,
     "LONG_BREAK_EVERY": 4,
+    "VOLUME": 70,
 }
 
 
@@ -80,6 +81,38 @@ class SettingsWindow(Gtk.Window):
         self.auto_pomodoros = self.add_check(grid, 4, "Auto Start Pomodoros", "AUTO_START_POMODOROS")
         self.long_interval = self.add_spin(grid, 5, "Long Break interval", "LONG_BREAK_EVERY", 1, 20)
 
+        outer.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
+
+        sound_title = Gtk.Label()
+        sound_title.set_markup("<b>Sound</b>")
+        sound_title.set_xalign(0)
+        outer.pack_start(sound_title, False, False, 0)
+
+        vol_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        vol_label = Gtk.Label(label="Volume")
+        vol_label.set_width_chars(8)
+        vol_box.pack_start(vol_label, False, False, 0)
+        self.volume = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL)
+        self.volume.set_range(0, 100)
+        self.volume.set_value(self.config["VOLUME"])
+        self.volume.set_size_request(200, -1)
+        self.volume.set_draw_value(True)
+        self.volume.set_value_pos(Gtk.PositionType.RIGHT)
+        vol_box.pack_start(self.volume, True, True, 0)
+        outer.pack_start(vol_box, False, False, 0)
+
+        outer.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
+
+        reset_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        reset_label = Gtk.Label(label="Reset all progress")
+        reset_label.set_xalign(0)
+        reset_box.pack_start(reset_label, True, True, 0)
+        reset_btn = Gtk.Button(label="Reset")
+        reset_btn.get_style_context().add_class("destructive-action")
+        reset_btn.connect("clicked", self.on_reset)
+        reset_box.pack_start(reset_btn, False, False, 0)
+        outer.pack_start(reset_box, False, False, 0)
+
         buttons = Gtk.ButtonBox(orientation=Gtk.Orientation.HORIZONTAL)
         buttons.set_layout(Gtk.ButtonBoxStyle.END)
         buttons.set_spacing(8)
@@ -118,6 +151,9 @@ class SettingsWindow(Gtk.Window):
         grid.attach(check, 0, row, 3, 1)
         return check
 
+    def on_reset(self, _):
+        os.system("~/.config/waybar/scripts/pomodoro.sh reset >/dev/null 2>&1 &")
+
     def on_save(self, *_):
         config = {
             "FOCUS_MIN": self.focus.get_value_as_int(),
@@ -126,6 +162,7 @@ class SettingsWindow(Gtk.Window):
             "AUTO_START_BREAKS": 1 if self.auto_breaks.get_active() else 0,
             "AUTO_START_POMODOROS": 1 if self.auto_pomodoros.get_active() else 0,
             "LONG_BREAK_EVERY": self.long_interval.get_value_as_int(),
+            "VOLUME": int(self.volume.get_value()),
         }
         write_config(self.config_path, config)
         self.close()

@@ -1,5 +1,6 @@
 #!/bin/bash
-TEMP=$(( $(cat /sys/class/hwmon/hwmon6/temp1_input) / 1000 ))
+CORETEMP_DIR=$(for f in /sys/class/hwmon/hwmon*/name; do [ "$(cat "$f" 2>/dev/null)" = "coretemp" ] && dirname "$f"; done | head -1)
+TEMP=$(( $(cat "$CORETEMP_DIR/temp1_input") / 1000 ))
 
 if [ $TEMP -lt 60 ]; then
     CLASS="cool"

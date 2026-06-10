@@ -248,14 +248,21 @@ require("lazy").setup({
     end,
   },
 
-  {
-      "OXY2DEV/markview.nvim",
-      lazy = false,
-      config = function()
-        require("markview").setup({});
-        vim.keymap.set("n", "<leader>m", "<cmd>Markview toggle<CR>", { desc = "Toggle markdown preview" });
-      end,
-  },
+-- markdown viewer
+    {
+      "iamcco/markdown-preview.nvim",
+      cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
+      build = "cd app && npx --yes yarn install",
+      ft = { "markdown" },
+       keys = {
+        { "<leader>m", "<cmd>MarkdownPreviewToggle<cr>", ft = "markdown", desc = "Markdown preview toggle" },
+      },
+    config = function()
+      -- vim.g.mkdp_auto_start = 1     -- autostart
+      vim.g.mkdp_auto_close = 1   -- closes when you leave the buffer
+      vim.g.mkdp_theme = "dark"
+    end,
+    },
 
   -- Statusline
   {

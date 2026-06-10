@@ -41,6 +41,7 @@ write_default_config() {
     printf 'AUTO_START_BREAKS=0\n'
     printf 'AUTO_START_POMODOROS=0\n'
     printf 'LONG_BREAK_EVERY=4\n'
+    printf 'VOLUME=70\n'
   } > "$CONFIG_FILE"
 }
 
@@ -74,6 +75,7 @@ load_config() {
   AUTO_START_BREAKS="$(clamp_bool "${POMODORO_AUTO_START_BREAKS:-$AUTO_START_BREAKS}")"
   AUTO_START_POMODOROS="$(clamp_bool "${POMODORO_AUTO_START_POMODOROS:-$AUTO_START_POMODOROS}")"
   LONG_BREAK_EVERY="$(clamp_int "${POMODORO_LONG_BREAK_EVERY:-$LONG_BREAK_EVERY}" 4 1 20)"
+  VOLUME="$(clamp_int "${POMODORO_VOLUME:-$VOLUME}" 70 0 100)"
 }
 
 save_config_values() {
@@ -85,6 +87,7 @@ save_config_values() {
     printf 'AUTO_START_BREAKS=%q\n' "$AUTO_START_BREAKS"
     printf 'AUTO_START_POMODOROS=%q\n' "$AUTO_START_POMODOROS"
     printf 'LONG_BREAK_EVERY=%q\n' "$LONG_BREAK_EVERY"
+    printf 'VOLUME=%q\n' "$VOLUME"
   } > "$CONFIG_FILE"
 }
 
@@ -97,9 +100,10 @@ notify() {
 
 play_alert() {
   local sound="${POMODORO_ALERT_SOUND:-/usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga}"
+  local vol="${VOLUME:-70}"
 
   if command -v paplay >/dev/null 2>&1 && [[ -r "$sound" ]]; then
-    paplay --device="@DEFAULT_SINK@" "$sound" >/dev/null 2>&1 && return 0
+    paplay --volume=$(( vol * 65536 / 100 )) --device="@DEFAULT_SINK@" "$sound" >/dev/null 2>&1 && return 0
   fi
 
   if command -v canberra-gtk-play >/dev/null 2>&1; then
@@ -116,8 +120,8 @@ play_alert() {
 alert() {
   local title="$1"
   local body="$2"
-  notify "$title" "$body"
-  play_alert &
+  notify "$title" "$body" 9>&- &
+  play_alert 9>&- &
 }
 
 duration_for() {
@@ -205,16 +209,18 @@ advance_phase() {
       start_mode "break" "$now" "$AUTO_START_BREAKS"
       alert "Pomodoro complete" "Take a short break."
     fi
+    sudo ~/.config/hypr/scripts/focus-block.sh unblock 2>/dev/null || true
   else
     start_mode "focus" "$now" "$AUTO_START_POMODOROS"
     alert "Break finished" "Time to focus."
+    sudo ~/.config/hypr/scripts/focus-block.sh block 2>/dev/null || true
   fi
 }
 
 open_settings() {
   local helper="$HOME/.config/waybar/scripts/pomodoro-settings.py"
   if [[ -x "$helper" ]]; then
-    "$helper" "$CONFIG_FILE"
+    "$helper" "$CONFIG_FILE" &
     return 0
   fi
 
@@ -279,12 +285,8 @@ render() {
     text="$(printf '%s %02d:%02d' "$icon" "$mins" "$secs")"
   fi
 
-  tooltip="$label $(printf '%02d:%02d' "$mins" "$secs")"
-  if [[ "$running" -eq 1 ]]; then
-    tooltip="$tooltip\nLeft: pause  Right: settings  Middle: skip"
-  else
-    tooltip="$tooltip\nLeft: start/resume  Right: settings  Middle: skip"
-  fi
+  tooltip="$label #$((cycle + 1)) — $(printf '%02d:%02d' "$mins" "$secs")"
+  [[ "$mode" == "focus" ]] && tooltip="$tooltip — $cycle today"
 
   printf '{"text":"%s","class":["%s","%s"],"tooltip":"%s"}\n' \
     "$(json_escape "$text")" \
@@ -325,6 +327,7 @@ with_lock() {
       started_at=0
       remaining="$(duration_for focus)"
       cycle=0
+      sudo ~/.config/hypr/scripts/focus-block.sh unblock 2>/dev/null || true
       notify "Pomodoro reset" "Ready for a fresh focus block."
       ;;
     init)
@@ -334,6 +337,7 @@ with_lock() {
       started_at="$now"
       remaining="$(duration_for focus)"
       cycle=0
+      sudo ~/.config/hypr/scripts/focus-block.sh block 2>/dev/null || true
       notify "Pomodoro started" "Focus for ${FOCUS_MIN} minutes."
       ;;
     toggle-visible)
