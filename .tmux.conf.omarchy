@@ -32,15 +32,16 @@ bind r command-prompt -I "#W" "rename-window -- '%%'"
 bind c new-window -c "#{pane_current_path}"
 bind k kill-window
 
-bind -n M-1 select-window -t 1
-bind -n M-2 select-window -t 2
-bind -n M-3 select-window -t 3
-bind -n M-4 select-window -t 4
-bind -n M-5 select-window -t 5
-bind -n M-6 select-window -t 6
-bind -n M-7 select-window -t 7
-bind -n M-8 select-window -t 8
-bind -n M-9 select-window -t 9
+# Alt+number is disabled so it doesn't conflict with app shortcuts (e.g. tmux in tmux)
+unbind -n M-1
+unbind -n M-2
+unbind -n M-3
+unbind -n M-4
+unbind -n M-5
+unbind -n M-6
+unbind -n M-7
+unbind -n M-8
+unbind -n M-9
 
 bind -n M-Left select-window -t -1
 bind -n M-Right select-window -t +1
@@ -58,6 +59,7 @@ bind -n M-Up switch-client -p
 bind -n M-Down switch-client -n
 
 # General
+set -g default-shell /usr/bin/zsh
 set -g default-terminal "tmux-256color"
 set -ag terminal-overrides ",*:RGB"
 set -g mouse on
@@ -98,6 +100,9 @@ setw -g clock-mode-colour blue
 set -s copy-command 'wl-copy'
 set -g update-environment "WAYLAND_DISPLAY"
 
+# Paste system clipboard into tmux: Prefix + Ctrl+v
+bind -T prefix C-v run "tmux set-buffer \"$(wl-paste)\" \\; paste-buffer"
+
 # Plugins
 set -g @plugin 'tmux-plugins/tpm'
 set -g @plugin 'tmux-plugins/tmux-resurrect'
@@ -105,6 +110,10 @@ set -g @plugin 'tmux-plugins/tmux-continuum'
 set -g @resurrect-capture-pane-contents 'on'
 set -g @resurrect-pane-contents-area 'full'
 set -g @resurrect-save-command-strategy 'linux_procfs'
+# Relaunch these on restore (added to resurrect's default vim/nvim/less/... list).
+# claude restarts with --continue so it resumes the conversation that was open
+# in that pane's directory; drop the "->..." part to relaunch fresh instead.
+set -g @resurrect-processes '"~claude->claude --continue" ssh'
 set -g @continuum-restore 'on'
 set -g @continuum-save-interval '5'
 

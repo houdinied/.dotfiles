@@ -1,6 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "autoupdate": false,
+  "plugin": [
+    "./plugins/cs2-permission-reaction.js"
+  ],
   "model": "vllm/qwen3.6-27b",
   "small_model": "vllm/qwen3.6-27b",
   "provider": {

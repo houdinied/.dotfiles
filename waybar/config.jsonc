@@ -74,6 +74,7 @@
   "custom/pomodoro": {
     "exec": "~/.config/waybar/scripts/pomodoro.sh status",
     "interval": 1,
+    "signal": 8,
     "return-type": "json",
     "on-click": "~/.config/waybar/scripts/pomodoro.sh toggle",
     "on-click-right": "~/.config/waybar/scripts/pomodoro.sh settings",

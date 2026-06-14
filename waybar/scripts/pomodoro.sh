@@ -280,12 +280,12 @@ render() {
   if [[ "$running" -eq 1 ]]; then
     state="running"
     text="$(printf '%s %02d:%02d' "$icon" "$mins" "$secs")"
+    tooltip="▶ Running — $label #$((cycle + 1)) — $(printf '%02d:%02d' "$mins" "$secs")"
   else
     state="paused"
-    text="$(printf '%s %02d:%02d' "$icon" "$mins" "$secs")"
+    text="$(printf '󰏤 %02d:%02d' "$mins" "$secs")"
+    tooltip="⏸ Paused — $label #$((cycle + 1)) — $(printf '%02d:%02d' "$mins" "$secs")"
   fi
-
-  tooltip="$label #$((cycle + 1)) — $(printf '%02d:%02d' "$mins" "$secs")"
   [[ "$mode" == "focus" ]] && tooltip="$tooltip — $cycle today"
 
   printf '{"text":"%s","class":["%s","%s"],"tooltip":"%s"}\n' \
@@ -315,10 +315,21 @@ with_lock() {
         remaining="$left"
         running=0
         started_at=0
+        if [[ "$mode" == "focus" ]]; then
+          sudo ~/.config/hypr/scripts/focus-block.sh unblock 2>/dev/null || true
+        fi
+        command -v notify-send >/dev/null 2>&1 && \
+          notify-send -a "Pomodoro" -c pomodoro-pause -u critical \
+            "ТЫ ОСТАНОВИЛСЯ." \
+            "Жизнь как видеоигра, делай самый лучший ход на доске." \
+            >/dev/null 2>&1 || true
       else
         running=1
         started_at="$now"
         [[ "$remaining" -gt 0 ]] || remaining="$(duration_for "$mode")"
+        if [[ "$mode" == "focus" ]]; then
+          sudo ~/.config/hypr/scripts/focus-block.sh block 2>/dev/null || true
+        fi
       fi
       ;;
     reset)
@@ -366,6 +377,13 @@ with_lock() {
 
   save_state
   render
+
+  # Nudge waybar to re-poll immediately so clicks reflect instantly
+  case "$action" in
+    toggle|reset|init|skip|toggle-visible|reconfigure)
+      pkill -RTMIN+8 waybar 2>/dev/null || true
+      ;;
+  esac
 }
 
 load_config

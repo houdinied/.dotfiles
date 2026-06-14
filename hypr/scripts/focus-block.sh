@@ -7,8 +7,9 @@ sites=("youtube.com" "www.youtube.com" "x.com" "www.x.com" "linkedin.com" "www.l
 case "$action" in
     block)
         for site in "${sites[@]}"; do
-            if ! grep -q "$site $marker" "$hosts_file" 2>/dev/null; then
-                printf '127.0.0.1\t%s\t%s\n' "$site" "$marker" >> "$hosts_file"
+            line="$(printf '127.0.0.1\t%s\t%s' "$site" "$marker")"
+            if ! grep -qxF "$line" "$hosts_file" 2>/dev/null; then
+                printf '%s\n' "$line" >> "$hosts_file"
             fi
         done
         ;;

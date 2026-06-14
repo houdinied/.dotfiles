@@ -1,3 +1,5 @@
+model = "gpt-5.5"
+model_reasoning_effort = "xhigh"
 [features]
 codex_hooks = true
 
@@ -37,6 +39,9 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects."/home/bdepyzy/forge/gpu/icml-comp"]
+trust_level = "trusted"
+
+[projects."/home/bdepyzy/competitions/icml-comp"]
 trust_level = "trusted"
 
 [plugins."github@openai-curated"]

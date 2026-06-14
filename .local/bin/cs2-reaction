@@ -1,12 +1,14 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
 sound_dir="${CS2_REACTION_DIR:-$HOME/.local/share/cs2-reactions}"
 default_sound="$sound_dir/sounds__vo__agents__jungle_fem__aff1_cheer_08.wav"
 title=""
 body=""
+notify_mode=false
 
 if [[ "${1:-}" == "--notify" ]]; then
+  notify_mode=true
   title="${2:-CS2 reaction}"
   body="${3:-}"
 fi
@@ -28,10 +30,41 @@ if [[ -n "$title" ]] && command -v notify-send >/dev/null 2>&1; then
   notify-send -a "CS2 Reaction" -i "$HOME/.config/waybar/icons/counterstrike-player.png" "$title" "$body" >/dev/null 2>&1 || true
 fi
 
+# Determine playback volume.
+# - Non-notification reactions: full volume.
+# - Notification reactions: dynamic based on current system volume.
+#   * system volume 0-20%  -> notification at 20%
+#   * system volume >20%   -> notification at half of system volume
+# - CS2_REACTION_VOLUME env var overrides everything.
+if [[ -n "${CS2_REACTION_VOLUME:-}" ]]; then
+  volume="$CS2_REACTION_VOLUME"
+elif $notify_mode; then
+  system_volume_percent=100
+  if command -v wpctl >/dev/null 2>&1; then
+    system_volume_raw=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '{print $2}')
+    if [[ -n "$system_volume_raw" ]]; then
+      system_volume_percent=$(awk -v v="$system_volume_raw" 'BEGIN { printf "%d", v * 100 }')
+    fi
+  fi
+
+  if (( system_volume_percent <= 20 )); then
+    volume=20
+  else
+    volume=$(( system_volume_percent / 2 ))
+  fi
+else
+  volume=100
+fi
+
+if (( volume < 0 )); then volume=0; fi
+if (( volume > 100 )); then volume=100; fi
+
 if command -v pw-play >/dev/null 2>&1; then
-  pw-play "$sound" >/dev/null 2>&1
+  pw_volume=$(awk -v v="$volume" 'BEGIN { printf "%.3f", v / 100 }')
+  pw-play --volume="$pw_volume" "$sound" >/dev/null 2>&1
 elif command -v paplay >/dev/null 2>&1; then
-  paplay "$sound" >/dev/null 2>&1
+  pa_volume=$(( volume * 65536 / 100 ))
+  paplay --volume="$pa_volume" "$sound" >/dev/null 2>&1
 elif command -v aplay >/dev/null 2>&1; then
   aplay "$sound" >/dev/null 2>&1
 fi
