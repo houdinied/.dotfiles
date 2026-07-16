@@ -233,14 +233,17 @@ window#waybar {
 }
 
 /* Bluetooth */
-#bluetooth {
+#bluetooth,
+#custom-bluetooth {
   margin: 0 2px;
   min-width: 18px;
   color: #7aa2f7;
 }
 
 #bluetooth.disabled,
-#bluetooth.off {
+#bluetooth.off,
+#custom-bluetooth.disabled,
+#custom-bluetooth.off {
   opacity: 0.35;
 }
 

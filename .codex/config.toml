@@ -1,5 +1,6 @@
-model = "gpt-5.5"
-model_reasoning_effort = "xhigh"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+approvals_reviewer = "user"
 [features]
 codex_hooks = true
 
@@ -44,8 +45,30 @@ trust_level = "trusted"
 [projects."/home/bdepyzy/competitions/icml-comp"]
 trust_level = "trusted"
 
+[projects."/home/bdepyzy/competitions/gpu_mode"]
+trust_level = "trusted"
+
+[projects."/home/bdepyzy/competitions/gpu_mode/linalg"]
+trust_level = "trusted"
+
+[projects."/home/bdepyzy/work/RensselaerTrading"]
+trust_level = "trusted"
+
+[projects."/home/bdepyzy/work/candidex/candidex"]
+trust_level = "trusted"
+
+[projects."/home/bdepyzy/learn/nao_projects/nao"]
+trust_level = "trusted"
+
+[projects."/home/bdepyzy/competitions/tinygrad"]
+trust_level = "trusted"
+
 [plugins."github@openai-curated"]
 enabled = true
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
+"gpt-5.6-sol" = 2
+
+[notice]
+hide_full_access_warning = true

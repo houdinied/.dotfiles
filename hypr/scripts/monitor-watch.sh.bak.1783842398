@@ -8,17 +8,6 @@ ensure_waybar() {
   ~/.config/hypr/scripts/ensure-waybar.sh
 }
 
-# Re-declaring monitors in monitor-layout.sh drops sdrbrightness back to 1.0,
-# so restore the saved virtual brightness level after every layout change.
-reapply_brightness() {
-  local state_file="${XDG_CACHE_HOME:-$HOME/.cache}/omarchy-brightness-virtual"
-  [ -f "$state_file" ] || return 0
-  local value
-  value=$(cat "$state_file" 2>/dev/null) || return 0
-  [ -n "$value" ] || return 0
-  ~/.config/hypr/scripts/brightness-virtual.sh set "$value" >/dev/null 2>&1 || true
-}
-
 monitor_signature() {
   local output
 
@@ -32,7 +21,6 @@ monitor_signature() {
 }
 
 apply_monitor_layout
-reapply_brightness
 
 LAST_MONITORS=""
 while [ -z "$LAST_MONITORS" ]; do
@@ -52,7 +40,6 @@ while sleep 2; do
   if [ "$CURRENT_MONITORS" != "$LAST_MONITORS" ]; then
     sleep 1
     apply_monitor_layout
-    reapply_brightness
     omarchy-restart-waybar >/dev/null 2>&1 || true
     LAST_MONITORS=$(monitor_signature || echo "$CURRENT_MONITORS")
   fi

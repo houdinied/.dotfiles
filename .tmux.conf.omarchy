@@ -73,6 +73,7 @@ set -g set-clipboard on
 set -g allow-passthrough on
 setw -g aggressive-resize on
 set -g detach-on-destroy off
+set -g update-environment "DISPLAY WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_CURRENT_DESKTOP XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS"
 
 # Status bar
 set -g status-position bottom
@@ -98,10 +99,15 @@ setw -g clock-mode-colour blue
 
 # Wayland clipboard
 set -s copy-command 'wl-copy'
-set -g update-environment "WAYLAND_DISPLAY"
 
 # Paste system clipboard into tmux: Prefix + Ctrl+v
 bind -T prefix C-v run "tmux set-buffer \"$(wl-paste)\" \\; paste-buffer"
+
+# Disabled: pane-scoped Chromium workspace integration.
+# Prefix + b: bring up a pane-scoped Chromium window on workspace 1.
+# bind b run-shell -b "$HOME/.local/bin/tmux-chromium-pane activate '#{pane_id}'"
+# set-hook -g client-detached 'run-shell -b "$HOME/.local/bin/tmux-chromium-pane detach-all"'
+# set-hook -g session-closed 'run-shell -b "$HOME/.local/bin/tmux-chromium-pane detach-all"'
 
 # Plugins
 set -g @plugin 'tmux-plugins/tpm'
@@ -111,10 +117,10 @@ set -g @resurrect-capture-pane-contents 'on'
 set -g @resurrect-pane-contents-area 'full'
 set -g @resurrect-save-command-strategy 'linux_procfs'
 # Relaunch these on restore (added to resurrect's default vim/nvim/less/... list).
-# claude restarts with --continue so it resumes the conversation that was open
-# in that pane's directory; drop the "->..." part to relaunch fresh instead.
-set -g @resurrect-processes '"~claude->claude --continue" ssh'
+# Agent CLIs use their own session stores; tmux restarts the pane process and
+# the CLI resumes from its local state.
+set -g @resurrect-processes '"~claude->claude --continue" "~opencode-ai->opencode --session" "~codex->codex resume --last" ssh'
 set -g @continuum-restore 'on'
 set -g @continuum-save-interval '5'
 
-run '~/.tmux/plugins/tpm/tpm'
+run '~/.config/tmux/plugins/tpm/tpm'
