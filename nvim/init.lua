@@ -16,7 +16,24 @@ vim.g.maplocalleader = " "
 vim.opt.number = true          -- Show line numbers
 vim.opt.relativenumber = true  -- Relative line numbers
 vim.opt.mouse = "a"           -- Enable mouse support
-vim.opt.clipboard = "unnamedplus" -- System clipboard integration
+vim.opt.clipboard = "unnamed,unnamedplus" -- y/p always use system clipboard (PRIMARY + CLIPBOARD)
+
+-- Custom clipboard provider: use a wrapper that rediscovers WAYLAND_DISPLAY
+-- from a running Wayland process, so wl-copy/wl-paste work inside tmux panes
+-- whose shell lacks the Wayland env (e.g. started before the session env was set).
+local clip = vim.env.HOME .. "/.config/hypr/scripts/nvim-clip.sh"
+vim.g.clipboard = {
+  name = "wl-clipboard",
+  copy = {
+    ["+"] = { clip, "copy" },
+    ["*"] = { clip, "copy", "--primary" },
+  },
+  paste = {
+    ["+"] = { clip, "paste" },
+    ["*"] = { clip, "paste", "--primary" },
+  },
+  cache_enabled = 0,
+}
 vim.opt.breakindent = true    -- Maintain indent when wrapping
 vim.opt.undofile = true       -- Save undo history
 vim.opt.ignorecase = true     -- Case insensitive searching vim.opt.smartcase = true      -- Case sensitive if uppercase present
@@ -39,7 +56,11 @@ vim.opt.iskeyword:remove("_")
 -- Clear search highlighting
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>")
 
--- Better window navigation
+-- Disable macro recording (q accidentally triggers it)
+vim.keymap.set("n", "q", "<Nop>")
+
+
+-- Direct directional split navigation
 vim.keymap.set("n", "<C-h>", "<C-w><C-h>", { desc = "Move focus to left window" })
 vim.keymap.set("n", "<C-l>", "<C-w><C-l>", { desc = "Move focus to right window" })
 vim.keymap.set("n", "<C-j>", "<C-w><C-j>", { desc = "Move focus to lower window" })
@@ -50,6 +71,22 @@ vim.keymap.set("n", "<leader>w", "<cmd>w<CR>", { desc = "Save file" })
 vim.keymap.set("n", "<leader>q", "<cmd>q<CR>", { desc = "Quit" })
 vim.keymap.set("n", "<leader>x", "<cmd>x<CR>", { desc = "Save and quit" })
 vim.keymap.set("n", "<leader>Q", "<cmd>qa!<CR>", { desc = "Force quit Neovim" })
+
+-- ZZ saves and closes everything (tree + all buffers) in one shot
+vim.keymap.set("n", "ZZ", "<cmd>xa<CR>", { desc = "Save all and quit" })
+
+-- Auto-close file tree when the last real buffer is closed
+vim.api.nvim_create_autocmd("QuitPre", {
+  callback = function()
+    local non_tree_wins = vim.tbl_filter(function(w)
+      local buf = vim.api.nvim_win_get_buf(w)
+      return vim.bo[buf].filetype ~= "NvimTree"
+    end, vim.api.nvim_list_wins())
+    if #non_tree_wins == 1 then
+      require("nvim-tree.api").tree.close()
+    end
+  end,
+})
 
 -- Buffer management
 vim.keymap.set("n", "<leader>bd", "<cmd>bd<CR>", { desc = "Delete buffer" })
@@ -201,16 +238,25 @@ vim.opt.rtp:prepend(lazypath)
 
 -- Plugin specifications
 require("lazy").setup({
-  -- Colorscheme
+  -- VSCode Dark+ colorscheme
   {
-    "folke/tokyonight.nvim",
+    "Mofiqul/vscode.nvim",
     priority = 1000,
     config = function()
-      require("tokyonight").setup({
-        style = "night", -- storm, moon, night, day
+      require("vscode").setup({
+        style = "dark",
         transparent = false,
+        italic_comments = true,
+        disable_nvimtree_bg = true,
+        color_overrides = {
+          -- keep the green comments
+          vscGreen = "#00ff00",
+        },
+        group_overrides = {
+          Comment = { fg = "#00ff00", italic = true },
+        },
       })
-      vim.cmd.colorscheme("tokyonight")
+      require("vscode").load()
     end,
   },
 
@@ -221,16 +267,110 @@ require("lazy").setup({
     -- Completion for `blink.cmp`
     -- dependencies = { "saghen/blink.cmp" },
 },
-  -- File explorer
+  -- File explorer (VSCode-style)
   {
     "nvim-tree/nvim-tree.lua",
     dependencies = "nvim-tree/nvim-web-devicons",
     config = function()
       require("nvim-tree").setup({
-        view = { width = 30 },
-        renderer = { group_empty = true },
+        view = {
+          width = 35,
+          side = "left",
+        },
+        renderer = {
+          group_empty = true,       -- collapse single-child folders like VSCode
+          highlight_git = true,     -- color files by git status
+          highlight_diagnostics = true,
+          indent_markers = {
+            enable = true,          -- VSCode-style indent lines in tree
+          },
+          icons = {
+            git_placement = "after",
+            show = {
+              file = true,
+              folder = true,
+              folder_arrow = true,
+              git = true,
+              diagnostics = true,
+            },
+            glyphs = {
+              git = {
+                unstaged  = "M",    -- modified  (yellow, like VSCode)
+                staged    = "S",    -- staged    (green)
+                untracked = "U",    -- new file  (green, like VSCode)
+                deleted   = "D",    -- deleted   (red)
+                ignored   = "◌",
+                renamed   = "R",
+                unmerged  = "C",    -- conflict
+              },
+            },
+          },
+        },
+        git = {
+          enable = true,
+          show_on_dirs = true,      -- show status on parent folders too
+        },
+        diagnostics = {
+          enable = true,
+          show_on_dirs = true,      -- bubble errors up to parent folders
+          icons = {
+            error   = " ",
+            warning = " ",
+            hint    = " ",
+            info    = " ",
+          },
+        },
+        actions = {
+          open_file = {
+            quit_on_open = false,   -- keep tree open after opening a file
+            resize_window = false,
+          },
+        },
+        update_focused_file = {
+          enable = true,            -- highlight the current file in tree
+          update_root = false,
+        },
+        filters = {
+          dotfiles = false,         -- show hidden files (toggle with H)
+        },
+        on_attach = function(bufnr)
+          local api = require("nvim-tree.api")
+          api.config.mappings.default_on_attach(bufnr)
+          local function map(key, action, desc)
+            vim.keymap.set("n", key, action, { buffer = bufnr, desc = desc, noremap = true, silent = true })
+          end
+          map("h",     api.node.navigate.parent_close, "Collapse folder")
+          map("l",     api.node.open.edit,             "Open / expand")
+          map("<CR>",  api.node.open.edit,             "Open")
+          map("v",     api.node.open.vertical,         "Open in vsplit")
+          map("s",     api.node.open.horizontal,       "Open in split")
+          map("H",     api.tree.toggle_hidden_filter,  "Toggle dotfiles")
+          map("R",     api.tree.reload,                "Refresh")
+          map("a",     api.fs.create,                  "New file/folder")
+          map("d",     api.fs.remove,                  "Delete")
+          map("r",     api.fs.rename,                  "Rename")
+          map("c",     api.fs.copy.node,               "Copy")
+          map("x",     api.fs.cut,                     "Cut")
+          map("p",     api.fs.paste,                   "Paste")
+          map("y",     api.fs.copy.filename,           "Copy name")
+          map("Y",     api.fs.copy.absolute_path,      "Copy path")
+        end,
       })
-      vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle file explorer" })
+
+      vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>",   { desc = "Toggle file explorer" })
+      vim.keymap.set("n", "<leader>E", "<cmd>NvimTreeFindFile<CR>", { desc = "Reveal file in tree" })
+
+      -- Open tree on startup but keep cursor in the file
+      vim.api.nvim_create_autocmd("VimEnter", {
+        callback = function(data)
+          local is_file = vim.fn.filereadable(data.file) == 1
+          local is_empty = data.file == "" and vim.bo[data.buf].buftype == ""
+          if is_file or is_empty then
+            require("nvim-tree.api").tree.open()
+            vim.cmd("wincmd p") -- move cursor back to the file
+          end
+        end,
+      })
     end,
   },
 
@@ -245,6 +385,10 @@ require("lazy").setup({
       vim.keymap.set("n", "<leader>fg", builtin.live_grep, { desc = "Live grep" })
       vim.keymap.set("n", "<leader>fb", builtin.buffers, { desc = "Find buffers" })
       vim.keymap.set("n", "<leader>fh", builtin.help_tags, { desc = "Find help" })
+      vim.keymap.set("n", "<leader>gc", builtin.git_commits, { desc = "Git commits" })
+      vim.keymap.set("n", "<leader>gf", builtin.git_bcommits, { desc = "Git file commits" })
+      vim.keymap.set("n", "<leader>gst", builtin.git_status, { desc = "Git status" })
+      vim.keymap.set("n", "<leader>gbr", builtin.git_branches, { desc = "Git branches" })
     end,
   },
 
@@ -271,7 +415,7 @@ require("lazy").setup({
     config = function()
       require("lualine").setup({
         options = {
-          theme = "tokyonight",
+          theme = "vscode",
           component_separators = { left = "", right = "" },
           section_separators = { left = "", right = "" },
         },
@@ -291,7 +435,7 @@ require("lazy").setup({
           remaining = "Normal",
         },
       })
-      vim.keymap.set("n", "<leader>d", "<cmd>DuckyType<CR>", { desc = "Start DuckyType test" })
+      vim.keymap.set("n", "<leader>D", "<cmd>DuckyType<CR>", { desc = "Start DuckyType test" })
     end,
   },
     
@@ -336,17 +480,6 @@ require("lazy").setup({
     end,
   },
   
-    {
-      'HiPhish/rainbow-delimiters.nvim',
-      config = function()
-        vim.g.rainbow_delimiters = {
-          strategy = {
-            'global',
-            'local',
-          },
-        }
-      end
-    },
   {
     "windwp/nvim-autopairs",
     event = "InsertEnter",
@@ -366,7 +499,8 @@ require("lazy").setup({
   {
     "lewis6991/gitsigns.nvim",
     config = function()
-      require("gitsigns").setup({
+      local gs = require("gitsigns")
+      gs.setup({
         signs = {
           add = { text = "+" },
           change = { text = "~" },
@@ -374,6 +508,28 @@ require("lazy").setup({
           topdelete = { text = "‾" },
           changedelete = { text = "~" },
         },
+        current_line_blame = false,
+        on_attach = function(bufnr)
+          local function map(mode, l, r, desc)
+            vim.keymap.set(mode, l, r, { buffer = bufnr, desc = desc })
+          end
+          -- Navigate hunks
+          map("n", "]h", gs.next_hunk, "Next git hunk")
+          map("n", "[h", gs.prev_hunk, "Prev git hunk")
+          -- Stage / reset
+          map("n", "<leader>gs", gs.stage_hunk, "Stage hunk")
+          map("n", "<leader>gr", gs.reset_hunk, "Reset hunk")
+          map("v", "<leader>gs", function() gs.stage_hunk({ vim.fn.line("."), vim.fn.line("v") }) end, "Stage selected")
+          map("v", "<leader>gr", function() gs.reset_hunk({ vim.fn.line("."), vim.fn.line("v") }) end, "Reset selected")
+          map("n", "<leader>gS", gs.stage_buffer, "Stage entire buffer")
+          map("n", "<leader>gR", gs.reset_buffer, "Reset entire buffer")
+          map("n", "<leader>gu", gs.undo_stage_hunk, "Undo stage hunk")
+          -- Inspect
+          map("n", "<leader>gp", gs.preview_hunk, "Preview hunk")
+          map("n", "<leader>gb", function() gs.blame_line({ full = true }) end, "Blame line (full)")
+          map("n", "<leader>gB", gs.toggle_current_line_blame, "Toggle inline blame")
+          map("n", "<leader>gd", gs.diffthis, "Diff this file")
+        end,
       })
     end,
   },
@@ -393,10 +549,13 @@ require("lazy").setup({
         ensure_installed = { "pyright" },
         handlers = {
           function(server_name)
-            require("lspconfig")[server_name].setup({})
+            require("lspconfig")[server_name].setup({
+              capabilities = require("cmp_nvim_lsp").default_capabilities(),
+            })
           end,
           pyright = function()
             require("lspconfig").pyright.setup({
+              capabilities = require("cmp_nvim_lsp").default_capabilities(),
               settings = {
                 python = {
                   analysis = {
@@ -412,6 +571,107 @@ require("lazy").setup({
       })
     end,
   },
+
+  -- Completion engine (the VSCode IntelliSense equivalent)
+  {
+    "hrsh7th/nvim-cmp",
+    event = "InsertEnter",
+    dependencies = {
+      "hrsh7th/cmp-nvim-lsp",
+      "hrsh7th/cmp-buffer",
+      "hrsh7th/cmp-path",
+      "L3MON4D3/LuaSnip",
+      "saadparwaiz1/cmp_luasnip",
+      "rafamadriz/friendly-snippets",
+    },
+    config = function()
+      local cmp = require("cmp")
+      local luasnip = require("luasnip")
+      require("luasnip.loaders.from_vscode").lazy_load()
+
+      cmp.setup({
+        snippet = {
+          expand = function(args) luasnip.lsp_expand(args.body) end,
+        },
+        window = {
+          completion = cmp.config.window.bordered(),
+          documentation = cmp.config.window.bordered(),
+        },
+        mapping = cmp.mapping.preset.insert({
+          ["<C-Space>"] = cmp.mapping.complete(),
+          ["<C-e>"]     = cmp.mapping.abort(),
+          ["<CR>"]      = cmp.mapping.confirm({ select = true }),
+          ["<Tab>"] = cmp.mapping(function(fallback)
+            if cmp.visible() then cmp.select_next_item()
+            elseif luasnip.expand_or_jumpable() then luasnip.expand_or_jump()
+            else fallback() end
+          end, { "i", "s" }),
+          ["<S-Tab>"] = cmp.mapping(function(fallback)
+            if cmp.visible() then cmp.select_prev_item()
+            elseif luasnip.jumpable(-1) then luasnip.jump(-1)
+            else fallback() end
+          end, { "i", "s" }),
+        }),
+        sources = cmp.config.sources({
+          { name = "nvim_lsp" },
+          { name = "luasnip" },
+          { name = "buffer" },
+          { name = "path" },
+        }),
+      })
+    end,
+  },
+
+  -- Git UI (lazygit in a floating window)
+  {
+    "kdheepak/lazygit.nvim",
+    cmd = { "LazyGit", "LazyGitConfig", "LazyGitCurrentFile" },
+    dependencies = "nvim-lua/plenary.nvim",
+    keys = {
+      { "<leader>gg", "<cmd>LazyGit<cr>", desc = "Open LazyGit" },
+    },
+  },
+
+  -- Side-by-side diff view + full file history browser
+  {
+    "sindrets/diffview.nvim",
+    cmd = { "DiffviewOpen", "DiffviewFileHistory", "DiffviewClose" },
+    keys = {
+      { "<leader>gv", "<cmd>DiffviewOpen<cr>",           desc = "Diff view (working tree)" },
+      { "<leader>gh", "<cmd>DiffviewFileHistory %<cr>",  desc = "This file's git history" },
+      { "<leader>gH", "<cmd>DiffviewFileHistory<cr>",    desc = "Repo git history" },
+    },
+  },
+
+  -- Rainbow brackets
+  {
+    'HiPhish/rainbow-delimiters.nvim',
+    config = function()
+      vim.g.rainbow_delimiters = { strategy = { 'global', 'local' } }
+    end
+  },
+
+  -- Indent guides
+  {
+    "lukas-reineke/indent-blankline.nvim",
+    main = "ibl",
+    config = function()
+      require("ibl").setup({ indent = { char = "│" }, scope = { enabled = true } })
+    end,
+  },
+
+  -- Diagnostics panel (like VSCode's Problems tab)
+  {
+    "folke/trouble.nvim",
+    dependencies = "nvim-tree/nvim-web-devicons",
+    cmd = "Trouble",
+    keys = {
+      { "<leader>xx", "<cmd>Trouble diagnostics toggle<cr>",              desc = "Diagnostics panel" },
+      { "<leader>xb", "<cmd>Trouble diagnostics toggle filter.buf=0<cr>", desc = "Buffer diagnostics" },
+      { "<leader>xs", "<cmd>Trouble symbols toggle<cr>",                  desc = "Symbols panel" },
+    },
+  },
+
 },
     {
   -- Lazy.nvim configuration
