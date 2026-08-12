@@ -1,10 +1,7 @@
 # Dynamic theme colors
 config-file = ?"~/.config/omarchy/current/theme/ghostty.conf"
 
-# Font
-font-family = "TerminessNerdFont"
-font-style = Regular
-font-size = 12
+font-family = "Noto Sans Mono"
 
 # Window
 window-theme = ghostty

@@ -149,12 +149,17 @@ icon_for() {
 }
 
 load_state() {
+  local today
+  today="$(date +%F)"
+
   running=0
   mode="focus"
   started_at=0
   remaining="$(duration_for focus)"
   cycle=0
+  cycle_date="$today"
   visible=1
+  allow_youtube=0
 
   [[ -r "$STATE_FILE" ]] || return 0
   # shellcheck disable=SC1090
@@ -165,7 +170,14 @@ load_state() {
   [[ "$started_at" =~ ^[0-9]+$ ]] || started_at=0
   [[ "$remaining" =~ ^[0-9]+$ ]] || remaining="$(duration_for "$mode")"
   [[ "$cycle" =~ ^[0-9]+$ ]] || cycle=0
+  [[ "$cycle_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || cycle_date="$today"
   [[ "$visible" =~ ^[0-1]$ ]] || visible=1
+  [[ "$allow_youtube" =~ ^[0-1]$ ]] || allow_youtube=0
+
+  if [[ "$cycle_date" != "$today" ]]; then
+    cycle=0
+    cycle_date="$today"
+  fi
 }
 
 save_state() {
@@ -175,7 +187,9 @@ save_state() {
     printf 'started_at=%q\n' "$started_at"
     printf 'remaining=%q\n' "$remaining"
     printf 'cycle=%q\n' "$cycle"
+    printf 'cycle_date=%q\n' "$cycle_date"
     printf 'visible=%q\n' "$visible"
+    printf 'allow_youtube=%q\n' "$allow_youtube"
   } > "$STATE_FILE"
 }
 
@@ -209,24 +223,50 @@ advance_phase() {
       start_mode "break" "$now" "$AUTO_START_BREAKS"
       alert "Pomodoro complete" "Take a short break."
     fi
+    # Work timer is up: the per-session YouTube allowance resets to off, so the
+    # next focus block re-blocks it.
+    allow_youtube=0
     sudo ~/.config/hypr/scripts/focus-block.sh unblock 2>/dev/null || true
   else
     start_mode "focus" "$now" "$AUTO_START_POMODOROS"
     alert "Break finished" "Time to focus."
-    sudo ~/.config/hypr/scripts/focus-block.sh block 2>/dev/null || true
+    sudo env FOCUS_ALLOW_YOUTUBE="$allow_youtube" ~/.config/hypr/scripts/focus-block.sh block 2>/dev/null || true
+  fi
+}
+
+skip_phase() {
+  local now="$1"
+
+  if [[ "$mode" == "focus" ]]; then
+    start_mode "break" "$now" "$AUTO_START_BREAKS"
+    allow_youtube=0
+    sudo ~/.config/hypr/scripts/focus-block.sh unblock 2>/dev/null || true
+    if [[ "$AUTO_START_BREAKS" -eq 1 ]]; then
+      notify "Focus skipped" "Short break started."
+    else
+      notify "Focus skipped" "Short break ready."
+    fi
+  else
+    start_mode "focus" "$now" "$AUTO_START_POMODOROS"
+    sudo env FOCUS_ALLOW_YOUTUBE="$allow_youtube" ~/.config/hypr/scripts/focus-block.sh block 2>/dev/null || true
+    if [[ "$AUTO_START_POMODOROS" -eq 1 ]]; then
+      notify "Break skipped" "Focus session started."
+    else
+      notify "Break skipped" "Focus session ready."
+    fi
   fi
 }
 
 open_settings() {
   local helper="$HOME/.config/waybar/scripts/pomodoro-settings.py"
   if [[ -x "$helper" ]]; then
-    "$helper" "$CONFIG_FILE" &
-    return 0
+    "$helper" "$CONFIG_FILE"
+    return $?
   fi
 
   command -v zenity >/dev/null 2>&1 || {
     notify "Pomodoro settings" "Install zenity to use the settings dialog."
-    exit 1
+    return 1
   }
 
   local output
@@ -243,7 +283,7 @@ open_settings() {
       --add-combo="Auto start pomodoros" \
       --combo-values="No|Yes" \
       --add-entry="Long break interval (current ${LONG_BREAK_EVERY})"
-  )" || exit 0
+  )" || return 1
 
   mapfile -t fields <<< "$output"
   FOCUS_MIN="$(clamp_int "${fields[0]:-$FOCUS_MIN}" "$FOCUS_MIN" 1 240)"
@@ -256,10 +296,10 @@ open_settings() {
 }
 
 render() {
-  local now left mins secs text state tooltip label icon
+  local now left mins secs text state tooltip label icon display_cycle
 
   if [[ "$visible" -eq 0 ]]; then
-    printf '{"text":"","class":["hidden"],"tooltip":"Pomodoro hidden. Press Super+Shift+W to show."}\n'
+    printf '{"text":"","class":["hidden"],"tooltip":"Pomodoro hidden. Press Super+Alt+P to show."}\n'
     return 0
   fi
 
@@ -276,17 +316,24 @@ render() {
   secs=$((left % 60))
   label="$(label_for "$mode")"
   icon="$(icon_for "$mode")"
+  if [[ "$mode" == "focus" ]]; then
+    display_cycle=$((cycle + 1))
+  elif [[ "$cycle" -gt 0 ]]; then
+    display_cycle="$cycle"
+  else
+    display_cycle=1
+  fi
 
   if [[ "$running" -eq 1 ]]; then
     state="running"
     text="$(printf '%s %02d:%02d' "$icon" "$mins" "$secs")"
-    tooltip="▶ Running — $label #$((cycle + 1)) — $(printf '%02d:%02d' "$mins" "$secs")"
+    tooltip="▶ Running — $label #$display_cycle — $(printf '%02d:%02d' "$mins" "$secs")"
   else
     state="paused"
     text="$(printf '󰏤 %02d:%02d' "$mins" "$secs")"
-    tooltip="⏸ Paused — $label #$((cycle + 1)) — $(printf '%02d:%02d' "$mins" "$secs")"
+    tooltip="⏸ Paused — $label #$display_cycle — $(printf '%02d:%02d' "$mins" "$secs")"
   fi
-  [[ "$mode" == "focus" ]] && tooltip="$tooltip — $cycle today"
+  tooltip="$tooltip — $cycle completed today — Left: pause/resume · Middle: skip · Right: settings"
 
   printf '{"text":"%s","class":["%s","%s"],"tooltip":"%s"}\n' \
     "$(json_escape "$text")" \
@@ -311,6 +358,7 @@ with_lock() {
 
   case "$action" in
     toggle)
+      visible=1
       if [[ "$running" -eq 1 ]]; then
         remaining="$left"
         running=0
@@ -318,17 +366,14 @@ with_lock() {
         if [[ "$mode" == "focus" ]]; then
           sudo ~/.config/hypr/scripts/focus-block.sh unblock 2>/dev/null || true
         fi
-        command -v notify-send >/dev/null 2>&1 && \
-          notify-send -a "Pomodoro" -c pomodoro-pause -u critical \
-            "ТЫ ОСТАНОВИЛСЯ." \
-            "Жизнь как видеоигра, делай самый лучший ход на доске." \
-            >/dev/null 2>&1 || true
+        notify "Pomodoro paused" \
+          "$(label_for "$mode") paused with $(printf '%02d:%02d' "$((left / 60))" "$((left % 60))") remaining."
       else
         running=1
         started_at="$now"
         [[ "$remaining" -gt 0 ]] || remaining="$(duration_for "$mode")"
         if [[ "$mode" == "focus" ]]; then
-          sudo ~/.config/hypr/scripts/focus-block.sh block 2>/dev/null || true
+          sudo env FOCUS_ALLOW_YOUTUBE="$allow_youtube" ~/.config/hypr/scripts/focus-block.sh block 2>/dev/null || true
         fi
       fi
       ;;
@@ -338,6 +383,8 @@ with_lock() {
       started_at=0
       remaining="$(duration_for focus)"
       cycle=0
+      cycle_date="$(date +%F)"
+      allow_youtube=0
       sudo ~/.config/hypr/scripts/focus-block.sh unblock 2>/dev/null || true
       notify "Pomodoro reset" "Ready for a fresh focus block."
       ;;
@@ -348,8 +395,15 @@ with_lock() {
       started_at="$now"
       remaining="$(duration_for focus)"
       cycle=0
-      sudo ~/.config/hypr/scripts/focus-block.sh block 2>/dev/null || true
+      cycle_date="$(date +%F)"
+      allow_youtube=0
+      sudo env FOCUS_ALLOW_YOUTUBE=0 ~/.config/hypr/scripts/focus-block.sh block 2>/dev/null || true
       notify "Pomodoro started" "Focus for ${FOCUS_MIN} minutes."
+      ;;
+    allow-youtube)
+      allow_youtube=1
+      sudo ~/.config/hypr/scripts/focus-block.sh allow-youtube 2>/dev/null || true
+      notify "YouTube allowed" "Unblocked until this focus session ends."
       ;;
     toggle-visible)
       if [[ "$visible" -eq 1 ]]; then
@@ -366,11 +420,12 @@ with_lock() {
       notify "Pomodoro settings saved" "Timer defaults updated."
       ;;
     skip)
-      advance_phase "$now"
+      visible=1
+      skip_phase "$now"
       ;;
     status) ;;
     *)
-      printf 'Usage: %s [status|toggle|reset|init|skip|settings|toggle-visible]\n' "$0" >&2
+      printf 'Usage: %s [status|toggle|reset|init|skip|settings|toggle-visible|allow-youtube]\n' "$0" >&2
       exit 2
       ;;
   esac
@@ -380,7 +435,7 @@ with_lock() {
 
   # Nudge waybar to re-poll immediately so clicks reflect instantly
   case "$action" in
-    toggle|reset|init|skip|toggle-visible|reconfigure)
+    toggle|reset|init|skip|toggle-visible|reconfigure|allow-youtube)
       pkill -RTMIN+8 waybar 2>/dev/null || true
       ;;
   esac
@@ -390,9 +445,10 @@ load_config
 
 case "${1:-status}" in
   settings|config)
-    open_settings
-    load_config
-    with_lock reconfigure
+    if open_settings; then
+      load_config
+      with_lock reconfigure
+    fi
     ;;
   *)
     with_lock "${1:-status}"

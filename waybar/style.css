@@ -181,6 +181,8 @@ window#waybar {
 
 #custom-pomodoro {
   min-width: 76px;
+  margin-left: 326px;
+  margin-right: 0;
   font-weight: bold;
   color: #e0af68;
 }
@@ -192,6 +194,13 @@ window#waybar {
 
 #custom-pomodoro.paused {
   opacity: 0.55;
+}
+
+#custom-pomodoro.hidden {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  font-size: 0;
 }
 
 #cpu {

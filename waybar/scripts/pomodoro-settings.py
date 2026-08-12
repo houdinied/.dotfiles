@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import subprocess
 import sys
 
 import gi
@@ -60,6 +61,7 @@ class SettingsWindow(Gtk.Window):
         super().__init__(title="Pomodoro Settings")
         self.config_path = config_path
         self.config = parse_config(config_path)
+        self.saved = False
         self.set_border_width(18)
         self.set_resizable(False)
 
@@ -100,6 +102,23 @@ class SettingsWindow(Gtk.Window):
         self.volume.set_value_pos(Gtk.PositionType.RIGHT)
         vol_box.pack_start(self.volume, True, True, 0)
         outer.pack_start(vol_box, False, False, 0)
+
+        outer.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
+
+        focus_title = Gtk.Label()
+        focus_title.set_markup("<b>Focus block</b>")
+        focus_title.set_xalign(0)
+        outer.pack_start(focus_title, False, False, 0)
+
+        yt_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        yt_label = Gtk.Label(label="Allow YouTube this focus session")
+        yt_label.set_xalign(0)
+        yt_box.pack_start(yt_label, True, True, 0)
+        self.allow_yt_btn = Gtk.Button(label="Allow")
+        self.allow_yt_btn.get_style_context().add_class("suggested-action")
+        self.allow_yt_btn.connect("clicked", self.on_allow_youtube)
+        yt_box.pack_start(self.allow_yt_btn, False, False, 0)
+        outer.pack_start(yt_box, False, False, 0)
 
         outer.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
 
@@ -152,7 +171,37 @@ class SettingsWindow(Gtk.Window):
         return check
 
     def on_reset(self, _):
-        os.system("~/.config/waybar/scripts/pomodoro.sh reset >/dev/null 2>&1 &")
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            modal=True,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.CANCEL,
+            text="Reset all Pomodoro progress?",
+        )
+        dialog.format_secondary_text(
+            "This clears today’s completed sessions and returns the timer to a paused focus block."
+        )
+        dialog.add_button("Reset", Gtk.ResponseType.YES)
+        reset_button = dialog.get_widget_for_response(Gtk.ResponseType.YES)
+        reset_button.get_style_context().add_class("destructive-action")
+        response = dialog.run()
+        dialog.destroy()
+
+        if response == Gtk.ResponseType.YES:
+            subprocess.Popen(
+                [os.path.expanduser("~/.config/waybar/scripts/pomodoro.sh"), "reset"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+    def on_allow_youtube(self, button):
+        subprocess.Popen(
+            [os.path.expanduser("~/.config/waybar/scripts/pomodoro.sh"), "allow-youtube"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        button.set_label("Allowed ✓")
+        button.set_sensitive(False)
 
     def on_save(self, *_):
         config = {
@@ -165,6 +214,7 @@ class SettingsWindow(Gtk.Window):
             "VOLUME": int(self.volume.get_value()),
         }
         write_config(self.config_path, config)
+        self.saved = True
         self.close()
 
 
@@ -174,7 +224,8 @@ def main():
     window.connect("destroy", Gtk.main_quit)
     window.show_all()
     Gtk.main()
+    return 0 if window.saved else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

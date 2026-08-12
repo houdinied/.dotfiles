@@ -5,10 +5,9 @@
   "height": 44,
   "spacing": 0,
 
-  "modules-left": ["custom/omarchy", "hyprland/workspaces", "custom/vpn"],
+  "modules-left": ["custom/omarchy", "hyprland/workspaces", "custom/pomodoro", "custom/vpn"],
   "modules-center": ["clock#time", "clock#date", "hyprland/submap"],
   "modules-right": [
-    "custom/pomodoro",
     "custom/screenrecording-indicator",
     "custom/idle-indicator",
     "custom/notification-silencing-indicator",
