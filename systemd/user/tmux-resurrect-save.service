@@ -1,0 +1,8 @@
+[Unit]
+Description=Save tmux resurrect state
+Documentation=file:%h/.config/tmux/plugins/tmux-resurrect/README.md
+
+[Service]
+Type=oneshot
+ExecCondition=/usr/bin/tmux has-session
+ExecStart=%h/.config/tmux/plugins/tmux-resurrect/scripts/save.sh quiet

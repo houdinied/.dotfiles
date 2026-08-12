@@ -1,0 +1,74 @@
+# Conventional GNU ls palette.
+#
+# Directories: bold blue
+# Standard files: normal terminal text
+# Executables: bright green
+# Symlinks: teal/cyan
+# Broken symlinks: red on black
+# Archives: red
+
+TERM xterm*
+TERM screen*
+TERM tmux*
+TERM rxvt*
+TERM linux
+TERM ghostty*
+TERM wezterm*
+TERM alacritty*
+TERM kitty*
+TERM foot*
+TERM *color*
+COLORTERM ?*
+
+NORMAL 00
+FILE 00
+RESET 0
+
+# File system types
+DIR 01;34
+LINK 01;36
+MULTIHARDLINK 00
+FIFO 40;33
+SOCK 01;35
+DOOR 01;35
+BLK 40;33;01
+CHR 40;33;01
+ORPHAN 01;31;40
+MISSING 01;31;40
+EXEC 01;32
+SETUID 37;41
+SETGID 30;43
+CAPABILITY 30;41
+STICKY_OTHER_WRITABLE 30;42
+OTHER_WRITABLE 34;42
+STICKY 37;44
+
+# Docs and text — yellow, to stand out from blue dirs on Tokyo Night
+.md 00;33
+.markdown 00;33
+.txt 00;33
+.rst 00;33
+.org 00;33
+.adoc 00;33
+.rtf 00;33
+.text 00;33
+
+# Archives and compressed files
+.zip 01;31
+.tar 01;31
+.tgz 01;31
+.gz 01;31
+.xz 01;31
+.zst 01;31
+.bz2 01;31
+.7z 01;31
+.rar 01;31
+.tbz 01;31
+.tbz2 01;31
+.txz 01;31
+.tlz 01;31
+.lz 01;31
+.lzma 01;31
+.lzo 01;31
+.z 01;31
+.Z 01;31

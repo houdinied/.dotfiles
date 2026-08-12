@@ -40,6 +40,9 @@ alias ssh='TERM=xterm-256color ssh'
 alias copy="wl-copy"
 alias opa="omarchy-pkg-add"
 alias py3="python3"
+# eGPU: eject non-interactively (auto-kills Chromium's GPU holder). `command`
+# avoids alias recursion so it resolves to ~/.local/bin/egpu-eject.
+alias egpu-eject="command egpu-eject --yes"
 
 # Aliases — tmux
 alias tat="tmux-attach-existing"
@@ -97,3 +100,4 @@ export PATH="/usr/local/go/bin:$GOBIN:$PATH"
 # Keep Go builds and tools from saturating the laptop.
 export GOMAXPROCS=2
 export GOFLAGS="-p=2"
+export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"

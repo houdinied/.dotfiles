@@ -1,0 +1,23 @@
+# Theme styling (follows omarchy theme switching)
+include=~/.config/omarchy/current/theme/mako.ini
+
+# Short-lived clipboard confirmation from Omarchy's browser copy-url extension
+[summary~=".*copied to clipboard$"]
+default-timeout=1000
+
+# Centered, menacing popup when the pomodoro timer is stopped
+# (sent with -c pomodoro-pause from ~/.config/waybar/scripts/pomodoro.sh)
+[category=pomodoro-pause]
+anchor=center
+layer=overlay
+font=sans-serif Bold 20px
+width=640
+height=240
+padding=35
+border-size=5
+border-radius=2
+background-color=#070000f2
+text-color=#ff1f1f
+border-color=#990000
+default-timeout=8000
+format=<b>%s</b>\n\n%b

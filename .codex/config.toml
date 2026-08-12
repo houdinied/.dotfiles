@@ -1,5 +1,5 @@
-model = "gpt-5.6-terra"
-model_reasoning_effort = "high"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "xhigh"
 approvals_reviewer = "user"
 [features]
 codex_hooks = true
@@ -63,12 +63,15 @@ trust_level = "trusted"
 [projects."/home/bdepyzy/competitions/tinygrad"]
 trust_level = "trusted"
 
+[projects."/home/bdepyzy/learn/learn-kernels"]
+trust_level = "trusted"
+
 [plugins."github@openai-curated"]
 enabled = true
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
-"gpt-5.6-sol" = 2
+"gpt-5.6-sol" = 4
 
 [notice]
 hide_full_access_warning = true

@@ -4,8 +4,8 @@
   "plugin": [
     "./plugins/cs2-permission-reaction.js"
   ],
-  "model": "vllm/qwen3.6-27b",
-  "small_model": "vllm/qwen3.6-27b",
+  "model": "vllm/qwen3.6",
+  "small_model": "vllm/qwen3.6",
   "provider": {
     "vllm": {
       "id": "vllm",
@@ -17,24 +17,23 @@
         "apiKey": "EMPTY"
       },
       "models": {
-        "qwen3.6-27b": {
-          "id": "qwen3.6-27b",
-          "name": "Qwen3.6-27B (local, 1M ctx)",
+        "qwen3.6": {
+          "id": "qwen3.6",
+          "name": "Qwen3.6 35B-A3B FP8 (express)",
           "reasoning": true,
           "tool_call": true,
           "temperature": true,
           "modalities": {
             "input": [
-              "text",
-              "image"
+              "text"
             ],
             "output": [
               "text"
             ]
           },
           "limit": {
-            "context": 1048576,
-            "output": 131072
+            "context": 65536,
+            "output": 8192
           }
         }
       }
